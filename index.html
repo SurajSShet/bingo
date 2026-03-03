@@ -54,32 +54,48 @@
           autocomplete="off" />
       </div>
 
-      <!-- Divider -->
-      <div class="flex items-center gap-3 mb-6">
+      <!-- ── CREATE SECTION ───────────────────────────── -->
+      <div class="flex items-center gap-3 mb-5">
         <div class="flex-1 h-px bg-gradient-to-r from-transparent to-blue-800/50"></div>
-        <span class="text-xs text-gray-500 font-medium">CHOOSE ACTION</span>
+        <span class="text-xs text-gray-500 font-medium">CREATE ROOM</span>
         <div class="flex-1 h-px bg-gradient-to-l from-transparent to-blue-800/50"></div>
       </div>
 
-      <!-- Action buttons -->
-      <div class="space-y-3 mb-6">
-        <button id="createRoomBtn" class="btn-primary w-full" onclick="handleCreate()">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Create New Room
-        </button>
-
-        <div class="flex gap-2">
-          <input id="roomIdInput" type="text" maxlength="8" placeholder="Room ID..."
-            class="input-field flex-1 text-center tracking-widest uppercase" autocomplete="off" />
-          <button id="joinRoomBtn" class="btn-secondary px-5" onclick="handleJoin()">
-            Join
-          </button>
+      <!-- Round selector -->
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-blue-300 uppercase tracking-widest mb-2">Number of Rounds</label>
+        <div class="round-selector" id="roundSelector">
+          <button class="round-btn" data-val="1" onclick="selectRounds(1)">1</button>
+          <button class="round-btn active" data-val="3" onclick="selectRounds(3)">3</button>
+          <button class="round-btn" data-val="5" onclick="selectRounds(5)">5</button>
+          <button class="round-btn" data-val="7" onclick="selectRounds(7)">7</button>
+          <button class="round-btn" data-val="9" onclick="selectRounds(9)">9</button>
         </div>
+        <p class="text-xs text-gray-600 mt-1.5 text-center">Most round wins = Champion 🏆</p>
       </div>
 
-      <!-- Info -->
+      <button id="createRoomBtn" class="btn-primary w-full mb-5" onclick="handleCreate()">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Create New Room
+      </button>
+
+      <!-- ── JOIN SECTION ─────────────────────────────── -->
+      <div class="flex items-center gap-3 mb-5">
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent to-blue-800/50"></div>
+        <span class="text-xs text-gray-500 font-medium">– OR JOIN –</span>
+        <div class="flex-1 h-px bg-gradient-to-l from-transparent to-blue-800/50"></div>
+      </div>
+
+      <div class="flex gap-2 mb-5">
+        <input id="roomIdInput" type="text" maxlength="8" placeholder="Room ID..."
+          class="input-field flex-1 text-center tracking-widest uppercase" autocomplete="off" />
+        <button id="joinRoomBtn" class="btn-secondary px-5" onclick="handleJoin()">
+          Join
+        </button>
+      </div>
+
       <p class="text-center text-xs text-gray-600">Up to 10 players · Turn-based · Numbers 1–25</p>
     </div>
 
@@ -112,35 +128,38 @@
   </div>
 
   <!-- Firebase SDK -->
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import {
-      getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp, collection
+      getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────
     const firebaseConfig = {
-      apiKey: "AIzaSyD3lgcbehcPrA9yFBgptROi_Of5-qAWmYs",
-      authDomain: "bingo-pwa-dafb1.firebaseapp.com",
-      projectId: "bingo-pwa-dafb1",
-      storageBucket: "bingo-pwa-dafb1.firebasestorage.app",
-      messagingSenderId: "114967777091",
-      appId: "1:114967777091:web:2b1e95a9f118f954bca9f6"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
-
     // ─────────────────────────────────────────────────────────────────────────
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Save db/auth to window for use in handlers
-    window._firebase = { auth, db };
-
-    // Anonymous auth on load
     signInAnonymously(auth).catch(console.error);
+
+    // Round picker state
+    let selectedRounds = 3;
+    window.selectRounds = function (val) {
+      selectedRounds = val;
+      document.querySelectorAll('.round-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.val) === val);
+      });
+    };
 
     window.handleCreate = async function () {
       const username = document.getElementById('username').value.trim();
@@ -157,14 +176,18 @@
           currentTurn: 0,
           calledNumbers: [],
           gameStarted: false,
-          winner: null,
+          roundWinner: null,
+          gameOver: false,
+          totalRounds: selectedRounds,
+          currentRound: 1,
+          roundHistory: [],
           createdAt: serverTimestamp()
         });
 
         sessionStorage.setItem('bingo_uid', uid);
         sessionStorage.setItem('bingo_name', username);
         sessionStorage.setItem('bingo_room', roomId);
-        window.location.href = `game.html`;
+        window.location.href = 'game.html';
       } catch (e) {
         hideLoading();
         showToast('Failed to create room. Check Firebase config.');
@@ -186,25 +209,12 @@
         const roomRef = doc(db, 'rooms', roomId);
         const snap = await getDoc(roomRef);
 
-        if (!snap.exists()) {
-          hideLoading();
-          showToast('Room not found 😕');
-          return;
-        }
+        if (!snap.exists()) { hideLoading(); showToast('Room not found 😕'); return; }
 
         const data = snap.data();
-        if (data.gameStarted) {
-          hideLoading();
-          showToast('Game already started!');
-          return;
-        }
-        if (data.players.length >= 10) {
-          hideLoading();
-          showToast('Room is full (max 10 players)');
-          return;
-        }
+        if (data.gameStarted) { hideLoading(); showToast('Game already started!'); return; }
+        if (data.players.length >= 10) { hideLoading(); showToast('Room is full (max 10 players)'); return; }
 
-        // Check if player already in room
         if (!data.players.find(p => p.id === uid)) {
           await updateDoc(roomRef, {
             players: arrayUnion({ id: uid, name: username, score: 0 })
@@ -214,7 +224,7 @@
         sessionStorage.setItem('bingo_uid', uid);
         sessionStorage.setItem('bingo_name', username);
         sessionStorage.setItem('bingo_room', roomId);
-        window.location.href = `game.html`;
+        window.location.href = 'game.html';
       } catch (e) {
         hideLoading();
         showToast('Failed to join room. Check Room ID.');
@@ -260,7 +270,6 @@
       }
     });
 
-    // Enter key on room ID input
     document.getElementById('roomIdInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') window.handleJoin();
     });

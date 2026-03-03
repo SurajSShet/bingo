@@ -19,11 +19,11 @@
 
 <body class="bg-gray-950 min-h-screen overflow-x-hidden">
 
-    <!-- Animated background orbs (subtle) -->
+    <!-- Subtle orbs -->
     <div class="orb orb-game-1"></div>
     <div class="orb orb-game-2"></div>
 
-    <!-- Header -->
+    <!-- ── HEADER ───────────────────────────────────────────────── -->
     <header class="game-header">
         <div class="flex items-center gap-3">
             <div class="logo-badge-sm">B</div>
@@ -42,8 +42,11 @@
                 </div>
             </div>
         </div>
+
+        <!-- Round counter + turn pill -->
         <div class="flex items-center gap-3">
-            <div id="turnIndicator" class="turn-pill">Waiting...</div>
+            <div id="roundBadge" class="round-badge">Round 1/3</div>
+            <div id="turnIndicator" class="turn-pill waiting">Waiting...</div>
             <button onclick="leaveGame()" class="text-gray-500 hover:text-red-400 transition-colors p-1"
                 title="Leave game">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -54,25 +57,23 @@
         </div>
     </header>
 
-    <!-- Main layout -->
+    <!-- ── MAIN LAYOUT ───────────────────────────────────────────── -->
     <main class="game-layout">
 
-        <!-- LEFT: Player list + Called numbers -->
+        <!-- LEFT: Player Scoreboard + Called numbers -->
         <aside class="game-sidebar">
 
-            <!-- Players panel -->
+            <!-- Scoreboard panel -->
             <div class="panel">
                 <div class="panel-header">
-                    <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
-                    <span>Players</span>
+                    <span>Scoreboard</span>
                     <span id="playerCount" class="ml-auto text-xs text-gray-500">0/10</span>
                 </div>
-                <div id="playerList" class="panel-body space-y-1.5">
-                    <!-- Populated by JS -->
-                </div>
+                <div id="playerList" class="panel-body space-y-1.5 max-h-72"></div>
                 <div id="startGameContainer" class="p-3 border-t border-white/5 hidden">
                     <button id="startGameBtn" class="btn-primary w-full text-sm py-2" onclick="startGame()">
                         Start Game
@@ -81,7 +82,7 @@
                 </div>
             </div>
 
-            <!-- Called numbers -->
+            <!-- Called numbers panel -->
             <div class="panel">
                 <div class="panel-header">
                     <svg class="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,27 +92,23 @@
                     <span>Called Numbers</span>
                     <span id="calledCount" class="ml-auto text-xs text-gray-500">0/25</span>
                 </div>
-                <div id="calledNumbers" class="panel-body">
-                    <div class="called-grid">
-                        <!-- Populated by JS -->
-                    </div>
+                <div id="calledNumbers" class="panel-body max-h-48">
+                    <p class="text-xs text-gray-600">No numbers called yet</p>
                 </div>
             </div>
 
         </aside>
 
-        <!-- CENTER: Bingo board -->
+        <!-- CENTER: Bingo Board -->
         <section class="game-center">
 
-            <!-- BINGO header letters -->
+            <!-- BINGO letters -->
             <div class="bingo-header-letters">
                 <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
             </div>
 
             <!-- Grid -->
-            <div id="bingoGrid" class="bingo-grid">
-                <!-- Populated by JS -->
-            </div>
+            <div id="bingoGrid" class="bingo-grid"></div>
 
             <!-- Lines count -->
             <div class="mt-4 flex items-center gap-2 justify-center">
@@ -126,11 +123,10 @@
                 <span id="linesCount" class="text-sm font-bold text-blue-400">0 / 5</span>
             </div>
 
-            <!-- Call number - only active on your turn -->
+            <!-- Call number input (shows on your turn) -->
             <div id="callNumberPanel" class="mt-4 hidden">
                 <div class="call-panel">
-                    <p class="text-sm text-blue-300 font-medium mb-3">It's your turn! Click a number on your board, or:
-                    </p>
+                    <p class="text-sm text-blue-300 font-medium mb-3">Your turn! Click a cell or type a number:</p>
                     <div class="flex gap-2">
                         <input id="manualCallInput" type="number" min="1" max="25" placeholder="1–25"
                             class="input-field flex-1 text-center" />
@@ -156,7 +152,7 @@
                 <div class="chat-input-area">
                     <input id="chatInput" type="text" maxlength="120" placeholder="Say something..."
                         class="input-field flex-1 text-sm py-2" autocomplete="off" />
-                    <button onclick="sendChat()" class="btn-icon" id="sendChatBtn">
+                    <button onclick="sendChat()" class="btn-icon">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -171,22 +167,56 @@
     <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
 
-    <!-- Winner Modal -->
-    <div id="winnerModal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <div class="confetti-container" id="confettiContainer"></div>
-            <div class="winner-crown">👑</div>
-            <h2 class="text-3xl font-black text-white mt-2" id="winnerName">Player</h2>
-            <p class="text-blue-400 font-medium text-sm mt-1">WINS THE GAME!</p>
-            <div class="winner-bingo-text">BINGO!</div>
-            <div class="flex gap-3 mt-6">
-                <button onclick="playAgain()" class="btn-primary flex-1">Play Again</button>
-                <button onclick="window.location.href='index.html'" class="btn-secondary flex-1">Leave</button>
+    <!-- ── ROUND COMPLETE MODAL ──────────────────────────────────── -->
+    <div id="roundModal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width:420px">
+            <div class="confetti-container" id="roundConfetti"></div>
+            <div class="text-4xl mb-2" id="roundEmoji">🎉</div>
+            <h2 class="text-xl font-black text-white" id="roundWinnerName">Player</h2>
+            <p class="text-blue-400 text-sm font-medium mt-0.5 mb-4" id="roundWinnerSub">wins Round 1!</p>
+
+            <!-- Standings table -->
+            <div class="standings-card">
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-left">Current Standings
+                </div>
+                <div id="roundStandings" class="space-y-1.5"></div>
             </div>
+
+            <div id="nextRoundBtn" class="mt-4 hidden">
+                <button class="btn-primary w-full" onclick="hostNextRound()">
+                    Next Round →
+                </button>
+                <p class="text-xs text-gray-600 text-center mt-1">Only host can advance</p>
+            </div>
+            <div id="waitNextRound" class="mt-4 text-sm text-gray-500">Waiting for host to start next round…</div>
         </div>
     </div>
 
-    <!-- Firebase + Game JS -->
+    <!-- ── GAME OVER MODAL ───────────────────────────────────────── -->
+    <div id="gameOverModal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width:440px">
+            <div class="confetti-container" id="gameOverConfetti"></div>
+            <div class="text-5xl mb-2">🏆</div>
+            <h2 class="text-2xl font-black text-white mb-0.5" id="championName">Champion</h2>
+            <p class="text-yellow-400 text-sm font-bold tracking-widest mb-5">CHAMPION!</p>
+
+            <!-- Final leaderboard -->
+            <div class="standings-card w-full">
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 text-left">Final Leaderboard
+                </div>
+                <div id="finalLeaderboard" class="space-y-2"></div>
+            </div>
+
+            <div class="flex gap-3 mt-5">
+                <button id="playAgainBtn" onclick="playAgain()" class="btn-primary flex-1">Play Again</button>
+                <button onclick="window.location.href='index.html'" class="btn-secondary flex-1">Leave</button>
+            </div>
+            <p id="playAgainNote" class="text-xs text-gray-600 text-center mt-1 hidden">Only host can start a new game
+            </p>
+        </div>
+    </div>
+
+    <!-- ── FIREBASE + GAME LOGIC ─────────────────────────────────── -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -198,12 +228,12 @@
 
         // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────
         const firebaseConfig = {
-            apiKey: "AIzaSyD3lgcbehcPrA9yFBgptROi_Of5-qAWmYs",
-            authDomain: "bingo-pwa-dafb1.firebaseapp.com",
-            projectId: "bingo-pwa-dafb1",
-            storageBucket: "bingo-pwa-dafb1.firebasestorage.app",
-            messagingSenderId: "114967777091",
-            appId: "1:114967777091:web:2b1e95a9f118f954bca9f6"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
         // ─────────────────────────────────────────────────────────────────────────
 
@@ -211,30 +241,34 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Session data
         const uid = sessionStorage.getItem('bingo_uid');
         const myName = sessionStorage.getItem('bingo_name');
         const roomId = sessionStorage.getItem('bingo_room');
+        if (!uid || !myName || !roomId) { window.location.href = 'index.html'; }
 
-        if (!uid || !myName || !roomId) {
-            window.location.href = 'index.html';
-        }
-
-        // Update header
         document.getElementById('headerRoomId').textContent = roomId;
+        const roomRef = doc(db, 'rooms', roomId);
+        const chatRef = collection(db, 'rooms', roomId, 'chat');
 
-        // ─── BOARD GENERATION ──────────────────────────────────────────────────────
+        // Track local round to detect changes
+        let lastKnownRound = null;
+        let gameState = null;
         let myBoard = [];
-        const BOARD_KEY = `bingo_board_${roomId}_${uid}`;
+        let roundModalShown = false;
+        let gameOverShown = false;
 
-        function generateBoard() {
-            const stored = sessionStorage.getItem(BOARD_KEY);
+        // ── BOARD GENERATION ───────────────────────────────────────────
+        function getBoardKey(round) {
+            return `bingo_board_${roomId}_${uid}_r${round}`;
+        }
+        function generateBoard(round) {
+            const key = getBoardKey(round);
+            const stored = sessionStorage.getItem(key);
             if (stored) return JSON.parse(stored);
             const nums = shuffle([...Array(25)].map((_, i) => i + 1));
-            sessionStorage.setItem(BOARD_KEY, JSON.stringify(nums));
+            sessionStorage.setItem(key, JSON.stringify(nums));
             return nums;
         }
-
         function shuffle(arr) {
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -243,14 +277,11 @@
             return arr;
         }
 
-        myBoard = generateBoard();
-        renderBoard();
-
-        // ─── BOARD RENDER ──────────────────────────────────────────────────────────
+        // ── BOARD RENDER ───────────────────────────────────────────────
         function renderBoard() {
             const grid = document.getElementById('bingoGrid');
             grid.innerHTML = '';
-            myBoard.forEach((num, idx) => {
+            myBoard.forEach(num => {
                 const cell = document.createElement('button');
                 cell.id = `cell-${num}`;
                 cell.className = 'bingo-cell';
@@ -261,117 +292,124 @@
             });
         }
 
-        function highlightCalled(calledNumbers) {
+        function highlightCalled(called) {
             myBoard.forEach(num => {
                 const cell = document.getElementById(`cell-${num}`);
                 if (!cell) return;
-                if (calledNumbers.includes(num)) {
-                    cell.classList.add('called');
-                } else {
-                    cell.classList.remove('called');
-                }
+                cell.classList.toggle('called', called.includes(num));
             });
-            updateCalledPanel(calledNumbers);
-            checkWinning(calledNumbers);
+            updateCalledPanel(called);
+            return checkWinning(called);
         }
 
-        // ─── WIN DETECTION ─────────────────────────────────────────────────────────
-        function checkWinning(calledNumbers) {
-            const called = new Set(calledNumbers);
-            const grid = myBoard; // flat 25 nums, 5x5
+        // ── WIN DETECTION ──────────────────────────────────────────────
+        function checkWinning(called) {
+            const s = new Set(called);
+            const g = myBoard;
             let lines = 0;
-            const winCells = new Set();
+            const win = new Set();
 
-            // Rows
             for (let r = 0; r < 5; r++) {
-                const row = grid.slice(r * 5, r * 5 + 5);
-                if (row.every(n => called.has(n))) {
-                    lines++;
-                    row.forEach(n => winCells.add(n));
-                }
+                const row = g.slice(r * 5, r * 5 + 5);
+                if (row.every(n => s.has(n))) { lines++; row.forEach(n => win.add(n)); }
             }
-            // Columns
             for (let c = 0; c < 5; c++) {
-                const col = [0, 1, 2, 3, 4].map(r => grid[r * 5 + c]);
-                if (col.every(n => called.has(n))) {
-                    lines++;
-                    col.forEach(n => winCells.add(n));
-                }
+                const col = [0, 1, 2, 3, 4].map(r => g[r * 5 + c]);
+                if (col.every(n => s.has(n))) { lines++; col.forEach(n => win.add(n)); }
             }
-            // Diagonal TL-BR
-            const diag1 = [0, 6, 12, 18, 24].map(i => grid[i]);
-            if (diag1.every(n => called.has(n))) { lines++; diag1.forEach(n => winCells.add(n)); }
-            // Diagonal TR-BL
-            const diag2 = [4, 8, 12, 16, 20].map(i => grid[i]);
-            if (diag2.every(n => called.has(n))) { lines++; diag2.forEach(n => winCells.add(n)); }
+            const d1 = [0, 6, 12, 18, 24].map(i => g[i]);
+            if (d1.every(n => s.has(n))) { lines++; d1.forEach(n => win.add(n)); }
+            const d2 = [4, 8, 12, 16, 20].map(i => g[i]);
+            if (d2.every(n => s.has(n))) { lines++; d2.forEach(n => win.add(n)); }
 
-            // Highlight winning cells
             myBoard.forEach(num => {
                 const cell = document.getElementById(`cell-${num}`);
-                if (cell) {
-                    cell.classList.toggle('winning', winCells.has(num));
-                }
+                if (cell) cell.classList.toggle('winning', win.has(num));
             });
-
-            // Update lines display
             updateLinesDisplay(lines);
-
             return lines;
         }
 
         function updateLinesDisplay(lines) {
             document.getElementById('linesCount').textContent = `${lines} / 5`;
-            const dots = document.querySelectorAll('.line-dot');
-            dots.forEach((dot, i) => {
-                dot.classList.toggle('active', i < lines);
-            });
+            document.querySelectorAll('.line-dot').forEach((d, i) => d.classList.toggle('active', i < lines));
         }
 
-        // ─── GAME STATE LISTENER ───────────────────────────────────────────────────
-        let gameState = null;
-
-        onSnapshot(doc(db, 'rooms', roomId), (snap) => {
+        // ── GAME STATE LISTENER ────────────────────────────────────────
+        onSnapshot(roomRef, snap => {
             if (!snap.exists()) return;
             gameState = snap.data();
-            renderPlayerList(gameState.players);
-            highlightCalled(gameState.calledNumbers || []);
+
+            const currentRound = gameState.currentRound || 1;
+            const totalRounds = gameState.totalRounds || 3;
+            const isHost = gameState.players?.[0]?.id === uid;
+
+            // Regenerate board when round changes
+            if (lastKnownRound !== currentRound) {
+                lastKnownRound = currentRound;
+                myBoard = generateBoard(currentRound);
+                renderBoard();
+                roundModalShown = false;
+                updateLinesDisplay(0);
+            }
+
+            document.getElementById('roundBadge').textContent = `Round ${currentRound}/${totalRounds}`;
+
+            renderScoreboard(gameState.players, gameState.currentTurn, currentRound);
+            const lines = highlightCalled(gameState.calledNumbers || []);
             updateTurnUI(gameState);
 
-            if (gameState.winner) {
-                showWinner(gameState.winner, gameState.players);
+            // ── Round winner detected ──────────────────────────────────
+            if (gameState.roundWinner && !roundModalShown && !gameState.gameOver) {
+                roundModalShown = true;
+                showRoundModal(gameState.roundWinner, gameState.players, currentRound, totalRounds, isHost);
+            }
+
+            // ── Game over ──────────────────────────────────────────────
+            if (gameState.gameOver && !gameOverShown) {
+                gameOverShown = true;
+                document.getElementById('roundModal').classList.add('hidden');
+                showGameOverModal(gameState.players, isHost);
             }
         });
 
-        // ─── PLAYER LIST ───────────────────────────────────────────────────────────
-        function renderPlayerList(players) {
+        // ── SCOREBOARD RENDER ──────────────────────────────────────────
+        const RANK_MEDALS = ['🥇', '🥈', '🥉'];
+
+        function renderScoreboard(players, currentTurn, currentRound) {
             const list = document.getElementById('playerList');
             const count = document.getElementById('playerCount');
+            if (!players) return;
             count.textContent = `${players.length}/10`;
 
-            list.innerHTML = '';
-            const isHost = players[0]?.id === uid;
+            // Sort by score descending for display, but keep turn index offset
+            const ranked = [...players]
+                .map((p, origIdx) => ({ ...p, origIdx }))
+                .sort((a, b) => b.score - a.score);
 
-            players.forEach((p, idx) => {
+            list.innerHTML = '';
+            ranked.forEach((p, rank) => {
                 const isMe = p.id === uid;
-                const isTurn = gameState && idx === gameState.currentTurn && gameState.gameStarted;
+                const isTurn = gameState?.gameStarted && p.origIdx === currentTurn;
+                const medal = RANK_MEDALS[rank] || `#${rank + 1}`;
                 const div = document.createElement('div');
                 div.className = `player-row ${isMe ? 'me' : ''} ${isTurn ? 'active-turn' : ''}`;
                 div.innerHTML = `
+          <div class="rank-medal">${medal}</div>
           <div class="player-avatar">${p.name[0].toUpperCase()}</div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1">
-              <span class="text-sm font-medium text-white truncate">${p.name}</span>
+              <span class="text-sm font-semibold text-white truncate">${p.name}</span>
               ${isMe ? '<span class="text-xs text-blue-400 font-medium">(You)</span>' : ''}
-              ${idx === 0 ? '<span class="text-xs text-yellow-400">👑</span>' : ''}
             </div>
-            <span class="text-xs text-gray-500">Lines: <span class="text-blue-400 font-medium">${p.score || 0}</span></span>
           </div>
+          <div class="score-badge">${p.score || 0} <span class="text-gray-500 text-xs">pts</span></div>
           ${isTurn ? '<div class="turn-badge">Turn</div>' : ''}
         `;
                 list.appendChild(div);
             });
 
-            // Show start button only for host if game not started
+            const isHost = players[0]?.id === uid;
             const startContainer = document.getElementById('startGameContainer');
             if (isHost && gameState && !gameState.gameStarted) {
                 startContainer.classList.remove('hidden');
@@ -380,42 +418,36 @@
             }
         }
 
-        // ─── TURN UI ───────────────────────────────────────────────────────────────
+        // ── TURN UI ────────────────────────────────────────────────────
         function updateTurnUI(state) {
             const indicator = document.getElementById('turnIndicator');
             const callPanel = document.getElementById('callNumberPanel');
-
-            if (!state.gameStarted) {
-                indicator.textContent = 'Waiting to start...';
+            if (!state.gameStarted || state.roundWinner || state.gameOver) {
+                indicator.textContent = state.gameStarted ? 'Round over' : 'Waiting...';
                 indicator.className = 'turn-pill waiting';
                 callPanel.classList.add('hidden');
                 return;
             }
-
-            const currentPlayer = state.players[state.currentTurn];
-            const isMyTurn = currentPlayer?.id === uid;
-
+            const cur = state.players[state.currentTurn];
+            const isMyTurn = cur?.id === uid;
             if (isMyTurn) {
                 indicator.textContent = 'Your Turn! 🎲';
                 indicator.className = 'turn-pill my-turn';
                 callPanel.classList.remove('hidden');
             } else {
-                indicator.textContent = `${currentPlayer?.name}'s Turn`;
+                indicator.textContent = `${cur?.name}'s Turn`;
                 indicator.className = 'turn-pill other-turn';
                 callPanel.classList.add('hidden');
             }
         }
 
-        // ─── GAME ACTIONS ──────────────────────────────────────────────────────────
+        // ── GAME ACTIONS ───────────────────────────────────────────────
         window.startGame = async function () {
             if (!gameState || gameState.gameStarted) return;
-            if (gameState.players.length < 2) {
-                showToast('Need at least 2 players to start!');
-                return;
-            }
+            if (gameState.players.length < 2) { showToast('Need at least 2 players!'); return; }
             try {
-                await updateDoc(doc(db, 'rooms', roomId), { gameStarted: true });
-                addSystemChat('🎮 Game started! Good luck everyone!');
+                await updateDoc(roomRef, { gameStarted: true });
+                await addSystemChat('🎮 Game started! Good luck everyone!');
             } catch (e) { console.error(e); }
         };
 
@@ -428,86 +460,188 @@
         };
 
         window.onCellClick = function (num) {
-            if (!gameState || !gameState.gameStarted) return;
-            const currentPlayer = gameState.players[gameState.currentTurn];
-            if (currentPlayer?.id !== uid) {
-                showToast("It's not your turn yet! ⏳");
-                return;
+            if (!gameState?.gameStarted || gameState.roundWinner) return;
+            if (gameState.players[gameState.currentTurn]?.id !== uid) {
+                showToast("It's not your turn yet! ⏳"); return;
             }
             doCallNumber(num);
         };
 
         async function doCallNumber(num) {
-            if (!gameState || !gameState.gameStarted) return;
-            const currentPlayer = gameState.players[gameState.currentTurn];
-            if (currentPlayer?.id !== uid) { showToast("It's not your turn!"); return; }
+            if (!gameState?.gameStarted || gameState.roundWinner) return;
+            const cur = gameState.players[gameState.currentTurn];
+            if (cur?.id !== uid) { showToast("Not your turn!"); return; }
+            if ((gameState.calledNumbers || []).includes(num)) { showToast(`${num} already called!`); return; }
 
-            if (gameState.calledNumbers.includes(num)) { showToast(`${num} already called!`); return; }
-
-            // Calculate lines after calling
-            const newCalled = [...gameState.calledNumbers, num];
+            const newCalled = [...(gameState.calledNumbers || []), num];
             const lines = checkWinning(newCalled);
-
             const nextTurn = (gameState.currentTurn + 1) % gameState.players.length;
+            const totalR = gameState.totalRounds || 3;
+            const curR = gameState.currentRound || 1;
+
             const update = {
                 calledNumbers: arrayUnion(num),
-                currentTurn: nextTurn
+                currentTurn: nextTurn,
             };
 
-            // Check if this player won (5 lines)
-            if (lines >= 5 && !gameState.winner) {
-                update.winner = { id: uid, name: myName };
+            // Player won the round (5+ lines)
+            if (lines >= 5 && !gameState.roundWinner) {
+                // Award +1 point to winner
+                const updatedPlayers = gameState.players.map(p => ({
+                    ...p,
+                    score: p.id === uid ? (p.score || 0) + 1 : (p.score || 0)
+                }));
+                const newHistory = [...(gameState.roundHistory || []), { round: curR, winnerId: uid, winnerName: myName }];
 
-                // Update score
-                const updatedPlayers = gameState.players.map(p => {
-                    if (p.id === uid) return { ...p, score: (p.score || 0) + 1 };
-                    return p;
-                });
-                update.players = updatedPlayers;
+                if (curR >= totalR) {
+                    // Final round done
+                    update.roundWinner = { id: uid, name: myName };
+                    update.gameOver = true;
+                    update.players = updatedPlayers;
+                    update.roundHistory = newHistory;
+                } else {
+                    // More rounds remain
+                    update.roundWinner = { id: uid, name: myName };
+                    update.players = updatedPlayers;
+                    update.roundHistory = newHistory;
+                }
             }
 
             try {
-                await updateDoc(doc(db, 'rooms', roomId), update);
-                await addSystemChat(`📢 ${myName} called number ${num}!`);
+                await updateDoc(roomRef, update);
+                await addSystemChat(`📢 ${myName} called ${num}!`);
+                if (lines >= 5 && !gameState.roundWinner) {
+                    await addSystemChat(`🎉 ${myName} got BINGO in Round ${curR}!`);
+                }
             } catch (e) { console.error(e); showToast('Failed to call number'); }
         }
 
-        window.playAgain = async function () {
-            document.getElementById('winnerModal').classList.add('hidden');
+        // ── NEXT ROUND (host only) ─────────────────────────────────────
+        window.hostNextRound = async function () {
+            if (!gameState || gameState.gameOver) return;
+            const nextRound = (gameState.currentRound || 1) + 1;
             try {
-                await updateDoc(doc(db, 'rooms', roomId), {
+                await updateDoc(roomRef, {
                     calledNumbers: [],
                     currentTurn: 0,
-                    winner: null,
-                    gameStarted: false
+                    roundWinner: null,
+                    currentRound: nextRound,
                 });
-                // Reset board
-                sessionStorage.removeItem(BOARD_KEY);
-                myBoard = generateBoard();
-                renderBoard();
-                addSystemChat('🔄 New game started!');
+                await addSystemChat(`🔄 Round ${nextRound} started!`);
+                document.getElementById('roundModal').classList.add('hidden');
+            } catch (e) { console.error(e); }
+        };
+
+        // ── PLAY AGAIN (host only) ─────────────────────────────────────
+        window.playAgain = async function () {
+            if (gameState.players[0]?.id !== uid) { showToast('Only the host can restart!'); return; }
+            try {
+                // Reset scores + full game state
+                const resetPlayers = gameState.players.map(p => ({ ...p, score: 0 }));
+                await updateDoc(roomRef, {
+                    players: resetPlayers,
+                    calledNumbers: [],
+                    currentTurn: 0,
+                    roundWinner: null,
+                    gameOver: false,
+                    currentRound: 1,
+                    roundHistory: [],
+                    gameStarted: false,
+                });
+                // Clear all boards from sessionStorage
+                for (let r = 1; r <= (gameState.totalRounds || 3); r++) {
+                    sessionStorage.removeItem(getBoardKey(r));
+                }
+                document.getElementById('gameOverModal').classList.add('hidden');
+                gameOverShown = false;
+                roundModalShown = false;
+                await addSystemChat('🔁 New game started! Scores reset.');
             } catch (e) { console.error(e); }
         };
 
         window.leaveGame = function () {
-            if (confirm('Leave the game?')) {
-                window.location.href = 'index.html';
-            }
+            if (confirm('Leave the game?')) window.location.href = 'index.html';
         };
 
-        // ─── CALLED NUMBERS PANEL ─────────────────────────────────────────────────
-        function updateCalledPanel(calledNumbers) {
-            const panel = document.getElementById('calledNumbers');
-            document.getElementById('calledCount').textContent = `${calledNumbers.length}/25`;
+        // ── ROUND COMPLETE MODAL ───────────────────────────────────────
+        function showRoundModal(roundWinner, players, curRound, totalRounds, isHost) {
+            const modal = document.getElementById('roundModal');
+            document.getElementById('roundEmoji').textContent = '🎉';
+            document.getElementById('roundWinnerName').textContent = roundWinner.name;
+            document.getElementById('roundWinnerSub').textContent = `wins Round ${curRound}!`;
 
-            if (calledNumbers.length === 0) {
-                panel.innerHTML = '<p class="text-xs text-gray-600 p-2">No numbers called yet</p>';
-                return;
+            // Standings sorted by score
+            const sorted = [...players].sort((a, b) => b.score - a.score);
+            const standingsEl = document.getElementById('roundStandings');
+            standingsEl.innerHTML = '';
+            sorted.forEach((p, rank) => {
+                const row = document.createElement('div');
+                row.className = 'standing-row';
+                const medal = RANK_MEDALS[rank] || `#${rank + 1}`;
+                row.innerHTML = `
+          <span class="standing-rank">${medal}</span>
+          <span class="flex-1 text-sm font-medium text-white truncate">${p.name}${p.id === uid ? ' <span class="text-blue-400 text-xs">(You)</span>' : ''}</span>
+          <span class="standing-score">${p.score} <span class="text-gray-500 text-xs">pts</span></span>
+        `;
+                standingsEl.appendChild(row);
+            });
+
+            if (isHost && curRound < totalRounds) {
+                document.getElementById('nextRoundBtn').classList.remove('hidden');
+                document.getElementById('waitNextRound').classList.add('hidden');
+            } else if (curRound < totalRounds) {
+                document.getElementById('nextRoundBtn').classList.add('hidden');
+                document.getElementById('waitNextRound').classList.remove('hidden');
+            } else {
+                document.getElementById('nextRoundBtn').classList.add('hidden');
+                document.getElementById('waitNextRound').classList.add('hidden');
             }
 
+            modal.classList.remove('hidden');
+            launchConfetti('roundConfetti');
+        }
+
+        // ── GAME OVER MODAL ────────────────────────────────────────────
+        function showGameOverModal(players, isHost) {
+            const sorted = [...players].sort((a, b) => b.score - a.score);
+            const champion = sorted[0];
+            document.getElementById('championName').textContent = champion.name;
+
+            const lb = document.getElementById('finalLeaderboard');
+            lb.innerHTML = '';
+            sorted.forEach((p, rank) => {
+                const row = document.createElement('div');
+                row.className = `standing-row ${rank === 0 ? 'champion-row' : ''}`;
+                const medal = RANK_MEDALS[rank] || `#${rank + 1}`;
+                row.innerHTML = `
+          <span class="standing-rank">${medal}</span>
+          <span class="flex-1 text-sm font-semibold text-white truncate">${p.name}${p.id === uid ? ' <span class="text-blue-400 text-xs">(You)</span>' : ''}</span>
+          <span class="standing-score">${p.score} <span class="text-gray-500 text-xs">pts</span></span>
+        `;
+                lb.appendChild(row);
+            });
+
+            if (!isHost) {
+                document.getElementById('playAgainBtn').disabled = true;
+                document.getElementById('playAgainBtn').classList.add('opacity-40');
+                document.getElementById('playAgainNote').classList.remove('hidden');
+            }
+
+            document.getElementById('gameOverModal').classList.remove('hidden');
+            launchConfetti('gameOverConfetti');
+        }
+
+        // ── CALLED NUMBERS PANEL ──────────────────────────────────────
+        function updateCalledPanel(called) {
+            document.getElementById('calledCount').textContent = `${called.length}/25`;
+            const panel = document.getElementById('calledNumbers');
+            if (called.length === 0) {
+                panel.innerHTML = '<p class="text-xs text-gray-600">No numbers called yet</p>';
+                return;
+            }
             const grid = document.createElement('div');
             grid.className = 'called-grid';
-            [...calledNumbers].sort((a, b) => a - b).forEach(n => {
+            [...called].sort((a, b) => a - b).forEach(n => {
                 const span = document.createElement('span');
                 span.className = 'called-num';
                 span.textContent = n;
@@ -517,68 +651,50 @@
             panel.appendChild(grid);
         }
 
-        // ─── WINNER DISPLAY ────────────────────────────────────────────────────────
-        function showWinner(winner, players) {
-            const modal = document.getElementById('winnerModal');
-            if (modal.classList.contains('hidden')) {
-                document.getElementById('winnerName').textContent = winner.name;
-                modal.classList.remove('hidden');
-                launchConfetti();
-            }
-        }
-
-        function launchConfetti() {
-            const container = document.getElementById('confettiContainer');
-            container.innerHTML = '';
-            const colors = ['#2563eb', '#7c3aed', '#db2777', '#d97706', '#10b981', '#f97316'];
-            for (let i = 0; i < 80; i++) {
-                const piece = document.createElement('div');
-                piece.className = 'confetti-piece';
-                piece.style.cssText = `
-          left: ${Math.random() * 100}%;
-          background: ${colors[Math.floor(Math.random() * colors.length)]};
-          animation-delay: ${Math.random() * 2}s;
-          animation-duration: ${2 + Math.random() * 2}s;
-          width: ${6 + Math.random() * 8}px;
-          height: ${6 + Math.random() * 8}px;
-          border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+        // ── CONFETTI ───────────────────────────────────────────────────
+        function launchConfetti(containerId) {
+            const c = document.getElementById(containerId);
+            c.innerHTML = '';
+            const colors = ['#2563eb', '#7c3aed', '#db2777', '#d97706', '#10b981', '#f97316', '#fbbf24'];
+            for (let i = 0; i < 60; i++) {
+                const p = document.createElement('div');
+                p.className = 'confetti-piece';
+                p.style.cssText = `
+          left:${Math.random() * 100}%;
+          background:${colors[~~(Math.random() * colors.length)]};
+          animation-delay:${Math.random() * 2}s;
+          animation-duration:${2 + Math.random() * 2}s;
+          width:${6 + Math.random() * 8}px;height:${6 + Math.random() * 8}px;
+          border-radius:${Math.random() > .5 ? '50%' : '2px'};
         `;
-                container.appendChild(piece);
+                c.appendChild(p);
             }
         }
 
-        // ─── CHAT ──────────────────────────────────────────────────────────────────
-        const chatRef = collection(db, 'rooms', roomId, 'chat');
-
-        // Listen for chat
-        onSnapshot(query(chatRef, orderBy('createdAt', 'asc'), limit(100)), (snap) => {
-            snap.docChanges().forEach(change => {
-                if (change.type === 'added') {
-                    const msg = change.doc.data();
-                    appendChatMessage(msg);
-                }
+        // ── CHAT ───────────────────────────────────────────────────────
+        onSnapshot(query(chatRef, orderBy('createdAt', 'asc'), limit(100)), snap => {
+            snap.docChanges().forEach(ch => {
+                if (ch.type === 'added') appendChatMessage(ch.doc.data());
             });
         });
 
         function appendChatMessage(msg) {
-            const container = document.getElementById('chatMessages');
-            const div = document.createElement('div');
-
+            const c = document.getElementById('chatMessages');
+            const d = document.createElement('div');
             if (msg.system) {
-                div.className = 'system-msg';
-                div.textContent = msg.text;
+                d.className = 'system-msg';
+                d.textContent = msg.text;
             } else {
                 const isMe = msg.uid === uid;
-                div.className = `chat-bubble ${isMe ? 'mine' : 'theirs'}`;
-                div.innerHTML = `
+                d.className = `chat-bubble ${isMe ? 'mine' : 'theirs'}`;
+                d.innerHTML = `
           ${!isMe ? `<span class="chat-sender">${msg.name}</span>` : ''}
           <span class="chat-text">${escapeHtml(msg.text)}</span>
           <span class="chat-time">${formatTime(msg.createdAt)}</span>
         `;
             }
-
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            c.appendChild(d);
+            c.scrollTop = c.scrollHeight;
         }
 
         window.sendChat = async function () {
@@ -586,29 +702,21 @@
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
-
             try {
-                await addDoc(chatRef, {
-                    uid,
-                    name: myName,
-                    text,
-                    system: false,
-                    createdAt: serverTimestamp()
-                });
+                await addDoc(chatRef, { uid, name: myName, text, system: false, createdAt: serverTimestamp() });
             } catch (e) { console.error(e); }
         };
 
         async function addSystemChat(text) {
-            try {
-                await addDoc(chatRef, { text, system: true, createdAt: serverTimestamp() });
-            } catch (e) { console.error(e); }
+            try { await addDoc(chatRef, { text, system: true, createdAt: serverTimestamp() }); }
+            catch (e) { console.error(e); }
         }
 
         document.getElementById('chatInput').addEventListener('keydown', e => {
             if (e.key === 'Enter') window.sendChat();
         });
 
-        // ─── UTILS ─────────────────────────────────────────────────────────────────
+        // ── UTILS ──────────────────────────────────────────────────────
         window.copyRoomId = function () {
             navigator.clipboard.writeText(roomId).then(() => showToast('Room ID copied! 📋'));
         };
