@@ -137,12 +137,12 @@
 
     // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyD3lgcbehcPrA9yFBgptROi_Of5-qAWmYs",
+      authDomain: "bingo-pwa-dafb1.firebaseapp.com",
+      projectId: "bingo-pwa-dafb1",
+      storageBucket: "bingo-pwa-dafb1.firebasestorage.app",
+      messagingSenderId: "114967777091",
+      appId: "1:114967777091:web:2b1e95a9f118f954bca9f6"
     };
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -150,8 +150,12 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Store the auth promise so handlers can await it
-    const authReady = signInAnonymously(auth).catch(console.error);
+    // Store the auth promise + capture any error for user-friendly messages
+    let authError = null;
+    const authReady = signInAnonymously(auth).catch(err => {
+      authError = err;
+      console.error('Firebase Auth error:', err.code, err.message);
+    });
 
     // Round picker state
     let selectedRounds = 3;
@@ -165,10 +169,18 @@
     window.handleCreate = async function () {
       const username = document.getElementById('username').value.trim();
       if (!username) { showToast('Please enter a username ✌️'); return; }
-      showLoading('Connecting...');
-      await authReady;  // wait for anonymous sign-in if not done yet
-      if (!auth.currentUser) { hideLoading(); showToast('Auth failed – check Firebase config'); return; }
-
+      showLoading('Signing in...');
+      await authReady;
+      if (!auth.currentUser) {
+        hideLoading();
+        const hint = authError?.code === 'auth/operation-not-allowed'
+          ? 'Enable Anonymous Auth in Firebase Console → Authentication → Sign-in method'
+          : authError?.code
+            ? `Firebase error: ${authError.code}`
+            : 'Auth failed – check your Firebase config in index.html';
+        showToast(hint);
+        return;
+      }
       showLoading('Creating room...');
       const roomId = generateRoomId();
       const uid = auth.currentUser.uid;
@@ -203,10 +215,18 @@
       const roomId = document.getElementById('roomIdInput').value.trim().toUpperCase();
       if (!username) { showToast('Please enter a username ✌️'); return; }
       if (!roomId) { showToast('Please enter a Room ID'); return; }
-      showLoading('Connecting...');
-      await authReady;  // wait for anonymous sign-in if not done yet
-      if (!auth.currentUser) { hideLoading(); showToast('Auth failed – check Firebase config'); return; }
-
+      showLoading('Signing in...');
+      await authReady;
+      if (!auth.currentUser) {
+        hideLoading();
+        const hint = authError?.code === 'auth/operation-not-allowed'
+          ? 'Enable Anonymous Auth in Firebase Console → Authentication → Sign-in method'
+          : authError?.code
+            ? `Firebase error: ${authError.code}`
+            : 'Auth failed – check your Firebase config in index.html';
+        showToast(hint);
+        return;
+      }
       showLoading('Joining room...');
       const uid = auth.currentUser.uid;
 
