@@ -150,7 +150,8 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    signInAnonymously(auth).catch(console.error);
+    // Store the auth promise so handlers can await it
+    const authReady = signInAnonymously(auth).catch(console.error);
 
     // Round picker state
     let selectedRounds = 3;
@@ -164,7 +165,9 @@
     window.handleCreate = async function () {
       const username = document.getElementById('username').value.trim();
       if (!username) { showToast('Please enter a username ✌️'); return; }
-      if (!auth.currentUser) { showToast('Connecting… try again in a second'); return; }
+      showLoading('Connecting...');
+      await authReady;  // wait for anonymous sign-in if not done yet
+      if (!auth.currentUser) { hideLoading(); showToast('Auth failed – check Firebase config'); return; }
 
       showLoading('Creating room...');
       const roomId = generateRoomId();
@@ -200,10 +203,13 @@
       const roomId = document.getElementById('roomIdInput').value.trim().toUpperCase();
       if (!username) { showToast('Please enter a username ✌️'); return; }
       if (!roomId) { showToast('Please enter a Room ID'); return; }
-      if (!auth.currentUser) { showToast('Connecting… try again in a second'); return; }
+      showLoading('Connecting...');
+      await authReady;  // wait for anonymous sign-in if not done yet
+      if (!auth.currentUser) { hideLoading(); showToast('Auth failed – check Firebase config'); return; }
 
       showLoading('Joining room...');
       const uid = auth.currentUser.uid;
+
 
       try {
         const roomRef = doc(db, 'rooms', roomId);
