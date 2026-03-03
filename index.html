@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multiplayer Bingo</title>
+  <meta name="description" content="Play real-time multiplayer Bingo with friends! Create or join a room and enjoy the classic game online." />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="bg-gray-950 min-h-screen flex items-center justify-center overflow-hidden">
+
+  <!-- Animated background orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Grid overlay -->
+  <div class="grid-overlay"></div>
+
+  <!-- Main card -->
+  <div class="relative z-10 w-full max-w-md px-4">
+    
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <div class="logo-badge mx-auto mb-4">
+        <span class="logo-b">B</span>
+        <span class="logo-dots">
+          <span></span><span></span><span></span><span></span>
+        </span>
+      </div>
+      <h1 class="text-5xl font-black text-white tracking-tight">BINGO</h1>
+      <p class="text-blue-400 text-sm font-medium mt-1 tracking-widest uppercase">Multiplayer · Real-Time</p>
+    </div>
+
+    <!-- Card -->
+    <div class="glass-card p-8">
+      
+      <!-- Username -->
+      <div class="mb-6">
+        <label for="username" class="block text-xs font-semibold text-blue-300 uppercase tracking-widest mb-2">Your Name</label>
+        <input
+          id="username"
+          type="text"
+          maxlength="20"
+          placeholder="Enter your username..."
+          class="input-field w-full"
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-3 mb-6">
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent to-blue-800/50"></div>
+        <span class="text-xs text-gray-500 font-medium">CHOOSE ACTION</span>
+        <div class="flex-1 h-px bg-gradient-to-l from-transparent to-blue-800/50"></div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="space-y-3 mb-6">
+        <button id="createRoomBtn" class="btn-primary w-full" onclick="handleCreate()">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Create New Room
+        </button>
+
+        <div class="flex gap-2">
+          <input
+            id="roomIdInput"
+            type="text"
+            maxlength="8"
+            placeholder="Room ID..."
+            class="input-field flex-1 text-center tracking-widest uppercase"
+            autocomplete="off"
+          />
+          <button id="joinRoomBtn" class="btn-secondary px-5" onclick="handleJoin()">
+            Join
+          </button>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <p class="text-center text-xs text-gray-600">Up to 10 players · Turn-based · Numbers 1–25</p>
+    </div>
+
+    <!-- Install PWA hint -->
+    <div id="pwaInstallBanner" class="mt-4 glass-card-sm p-3 flex items-center gap-3 hidden">
+      <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      </svg>
+      <div class="flex-1">
+        <p class="text-xs font-medium text-white">Install App</p>
+        <p class="text-xs text-gray-500">Play offline anytime</p>
+      </div>
+      <button id="pwaInstallBtn" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-lg font-medium transition-colors">Install</button>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-gray-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="flex flex-col items-center gap-4">
+      <div class="spinner"></div>
+      <p id="loadingText" class="text-white font-medium">Connecting...</p>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, serverTimestamp, collection
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // ── PASTE YOUR FIREBASE CONFIG HERE ──────────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Save db/auth to window for use in handlers
+    window._firebase = { auth, db };
+
+    // Anonymous auth on load
+    signInAnonymously(auth).catch(console.error);
+
+    window.handleCreate = async function () {
+      const username = document.getElementById('username').value.trim();
+      if (!username) { showToast('Please enter a username ✌️'); return; }
+      if (!auth.currentUser) { showToast('Connecting… try again in a second'); return; }
+
+      showLoading('Creating room...');
+      const roomId = generateRoomId();
+      const uid = auth.currentUser.uid;
+
+      try {
+        await setDoc(doc(db, 'rooms', roomId), {
+          players: [{ id: uid, name: username, score: 0 }],
+          currentTurn: 0,
+          calledNumbers: [],
+          gameStarted: false,
+          winner: null,
+          createdAt: serverTimestamp()
+        });
+
+        sessionStorage.setItem('bingo_uid', uid);
+        sessionStorage.setItem('bingo_name', username);
+        sessionStorage.setItem('bingo_room', roomId);
+        window.location.href = `game.html`;
+      } catch (e) {
+        hideLoading();
+        showToast('Failed to create room. Check Firebase config.');
+        console.error(e);
+      }
+    };
+
+    window.handleJoin = async function () {
+      const username = document.getElementById('username').value.trim();
+      const roomId = document.getElementById('roomIdInput').value.trim().toUpperCase();
+      if (!username) { showToast('Please enter a username ✌️'); return; }
+      if (!roomId) { showToast('Please enter a Room ID'); return; }
+      if (!auth.currentUser) { showToast('Connecting… try again in a second'); return; }
+
+      showLoading('Joining room...');
+      const uid = auth.currentUser.uid;
+
+      try {
+        const roomRef = doc(db, 'rooms', roomId);
+        const snap = await getDoc(roomRef);
+
+        if (!snap.exists()) {
+          hideLoading();
+          showToast('Room not found 😕');
+          return;
+        }
+
+        const data = snap.data();
+        if (data.gameStarted) {
+          hideLoading();
+          showToast('Game already started!');
+          return;
+        }
+        if (data.players.length >= 10) {
+          hideLoading();
+          showToast('Room is full (max 10 players)');
+          return;
+        }
+
+        // Check if player already in room
+        if (!data.players.find(p => p.id === uid)) {
+          await updateDoc(roomRef, {
+            players: arrayUnion({ id: uid, name: username, score: 0 })
+          });
+        }
+
+        sessionStorage.setItem('bingo_uid', uid);
+        sessionStorage.setItem('bingo_name', username);
+        sessionStorage.setItem('bingo_room', roomId);
+        window.location.href = `game.html`;
+      } catch (e) {
+        hideLoading();
+        showToast('Failed to join room. Check Room ID.');
+        console.error(e);
+      }
+    };
+
+    function generateRoomId() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      t.classList.add('show');
+      setTimeout(() => { t.classList.remove('show'); t.classList.add('hidden'); }, 3000);
+    }
+
+    function showLoading(text = 'Loading...') {
+      document.getElementById('loadingText').textContent = text;
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+
+    // PWA install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('pwaInstallBanner').classList.remove('hidden');
+    });
+    document.getElementById('pwaInstallBtn').addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        document.getElementById('pwaInstallBanner').classList.add('hidden');
+      }
+    });
+
+    // Enter key on room ID input
+    document.getElementById('roomIdInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') window.handleJoin();
+    });
+    document.getElementById('username').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('roomIdInput').focus();
+    });
+  </script>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+</body>
+</html>
