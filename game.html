@@ -344,13 +344,15 @@
             const totalRounds = gameState.totalRounds || 3;
             const isHost = gameState.players?.[0]?.id === uid;
 
-            // Regenerate board when round changes
+            // Regenerate board when round changes — runs on ALL clients via Firestore listener
             if (lastKnownRound !== currentRound) {
                 lastKnownRound = currentRound;
                 myBoard = generateBoard(currentRound);
                 renderBoard();
                 roundModalShown = false;
                 updateLinesDisplay(0);
+                // Close the round modal for every player automatically (not just host)
+                document.getElementById('roundModal').classList.add('hidden');
             }
 
             document.getElementById('roundBadge').textContent = `Round ${currentRound}/${totalRounds}`;
