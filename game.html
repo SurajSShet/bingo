@@ -186,9 +186,8 @@
                 <button class="btn-primary w-full" onclick="hostNextRound()">
                     Next Round →
                 </button>
-                <p class="text-xs text-gray-600 text-center mt-1">Only host can advance</p>
             </div>
-            <div id="waitNextRound" class="mt-4 text-sm text-gray-500">Waiting for host to start next round…</div>
+            <div id="waitNextRound" class="mt-4 text-sm text-gray-500 hidden"></div>
         </div>
     </div>
 
@@ -211,8 +210,6 @@
                 <button id="playAgainBtn" onclick="playAgain()" class="btn-primary flex-1">Play Again</button>
                 <button onclick="window.location.href='index.html'" class="btn-secondary flex-1">Leave</button>
             </div>
-            <p id="playAgainNote" class="text-xs text-gray-600 text-center mt-1 hidden">Only host can start a new game
-            </p>
         </div>
     </div>
 
@@ -518,7 +515,7 @@
             } catch (e) { console.error(e); showToast('Failed to call number'); }
         }
 
-        // ── NEXT ROUND (host only) ─────────────────────────────────────
+        // ── NEXT ROUND (any player) ────────────────────────────────────
         window.hostNextRound = async function () {
             if (!gameState || gameState.gameOver) return;
             const nextRound = (gameState.currentRound || 1) + 1;
@@ -534,9 +531,8 @@
             } catch (e) { console.error(e); }
         };
 
-        // ── PLAY AGAIN (host only) ─────────────────────────────────────
+        // ── PLAY AGAIN (any player) ────────────────────────────────────
         window.playAgain = async function () {
-            if (gameState.players[0]?.id !== uid) { showToast('Only the host can restart!'); return; }
             try {
                 // Reset scores + full game state
                 const resetPlayers = gameState.players.map(p => ({ ...p, score: 0 }));
@@ -557,7 +553,7 @@
                 document.getElementById('gameOverModal').classList.add('hidden');
                 gameOverShown = false;
                 roundModalShown = false;
-                await addSystemChat('🔁 New game started! Scores reset.');
+                await addSystemChat(`🔁 ${myName} started a new game! Scores reset.`);
             } catch (e) { console.error(e); }
         };
 
@@ -588,12 +584,9 @@
                 standingsEl.appendChild(row);
             });
 
-            if (isHost && curRound < totalRounds) {
+            if (curRound < totalRounds) {
                 document.getElementById('nextRoundBtn').classList.remove('hidden');
                 document.getElementById('waitNextRound').classList.add('hidden');
-            } else if (curRound < totalRounds) {
-                document.getElementById('nextRoundBtn').classList.add('hidden');
-                document.getElementById('waitNextRound').classList.remove('hidden');
             } else {
                 document.getElementById('nextRoundBtn').classList.add('hidden');
                 document.getElementById('waitNextRound').classList.add('hidden');
@@ -623,11 +616,7 @@
                 lb.appendChild(row);
             });
 
-            if (!isHost) {
-                document.getElementById('playAgainBtn').disabled = true;
-                document.getElementById('playAgainBtn').classList.add('opacity-40');
-                document.getElementById('playAgainNote').classList.remove('hidden');
-            }
+
 
             document.getElementById('gameOverModal').classList.remove('hidden');
             launchConfetti('gameOverConfetti');
