@@ -134,6 +134,12 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Customize board button (pre-game only) -->
+            <div id="customizeBoardBtn" class="mt-3 hidden">
+                <button onclick="openBoardSetup()" class="btn-secondary w-full text-sm py-2">🎯 Customize My
+                    Board</button>
+            </div>
         </section>
 
         <!-- RIGHT: Chat -->
@@ -166,6 +172,32 @@
 
     <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
+
+    <!-- ── BOARD SETUP MODAL ──────────────────────────────────── -->
+    <div id="boardSetupModal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width:480px">
+            <div class="text-3xl mb-2">🎯</div>
+            <h2 class="text-xl font-black text-white mb-1">Arrange Your Board</h2>
+            <p class="text-gray-400 text-sm mb-1">Click a number to <span
+                    class="text-blue-400 font-semibold">select</span> it, then click another cell to <span
+                    class="text-purple-400 font-semibold">swap</span>.</p>
+            <p class="text-gray-500 text-xs mb-4">Or hit Shuffle for a random layout. Changes are saved locally.</p>
+
+            <div id="setupGrid" style="
+                display:grid;
+                grid-template-columns:repeat(5,1fr);
+                gap:6px;
+                max-width:310px;
+                margin:0 auto 16px;
+            "></div>
+
+            <div class="flex gap-3">
+                <button onclick="shuffleSetupBoard()" class="btn-secondary flex-1">🔀 Shuffle</button>
+                <button onclick="saveBoardSetup()" class="btn-primary flex-1">✅ Save Board</button>
+            </div>
+            <p id="boardSetupStatus" class="text-xs text-green-400 mt-2 text-center" style="min-height:18px"></p>
+        </div>
+    </div>
 
     <!-- ── ROUND COMPLETE MODAL ──────────────────────────────────── -->
     <div id="roundModal" class="modal-overlay hidden">
@@ -253,6 +285,9 @@
         let myBoard = [];
         let roundModalShown = false;
         let gameOverShown = false;
+        let hasDeclaredWin = false;   // prevents duplicate bingo claims per round
+        let setupBoard = [];          // working copy inside board-setup modal
+        let setupSelected = -1;       // index of the selected cell in setup modal
 
         // ── BOARD GENERATION ───────────────────────────────────────────
         function getBoardKey(round) {
@@ -347,6 +382,7 @@
                 myBoard = generateBoard(currentRound);
                 renderBoard();
                 roundModalShown = false;
+                hasDeclaredWin = false;   // reset claim flag for new round
                 updateLinesDisplay(0);
                 // Close the round modal for every player automatically (not just host)
                 document.getElementById('roundModal').classList.add('hidden');
@@ -354,9 +390,26 @@
 
             document.getElementById('roundBadge').textContent = `Round ${currentRound}/${totalRounds}`;
 
+            // Show / hide the "Customize Board" button
+            const customBtn = document.getElementById('customizeBoardBtn');
+            if (!gameState.gameStarted) {
+                customBtn.classList.remove('hidden');
+            } else {
+                customBtn.classList.add('hidden');
+                // Auto-close setup modal when game starts
+                document.getElementById('boardSetupModal').classList.add('hidden');
+            }
+
             renderScoreboard(gameState.players, gameState.currentTurn, currentRound);
             const lines = highlightCalled(gameState.calledNumbers || []);
             updateTurnUI(gameState);
+
+            // ── Instant bingo claim: each client checks their own board ──
+            if (gameState.gameStarted && !gameState.roundWinner && !gameState.gameOver
+                && lines >= 5 && !hasDeclaredWin) {
+                hasDeclaredWin = true;
+                claimBingo(currentRound, totalRounds);
+            }
 
             // ── Round winner detected ──────────────────────────────────
             if (gameState.roundWinner && !roundModalShown && !gameState.gameOver) {
@@ -472,47 +525,44 @@
             if (cur?.id !== uid) { showToast("Not your turn!"); return; }
             if ((gameState.calledNumbers || []).includes(num)) { showToast(`${num} already called!`); return; }
 
-            const newCalled = [...(gameState.calledNumbers || []), num];
-            const lines = checkWinning(newCalled);
             const nextTurn = (gameState.currentTurn + 1) % gameState.players.length;
-            const totalR = gameState.totalRounds || 3;
-            const curR = gameState.currentRound || 1;
+
+            // Just advance the called numbers + turn; bingo is detected on every client's onSnapshot
+            try {
+                await updateDoc(roomRef, {
+                    calledNumbers: arrayUnion(num),
+                    currentTurn: nextTurn,
+                });
+                await addSystemChat(`📢 ${myName} called ${num}!`);
+            } catch (e) { console.error(e); showToast('Failed to call number'); }
+        }
+
+        // ── CLAIM BINGO (called by any client who reaches 5 lines) ─────
+        async function claimBingo(curR, totalR) {
+            // Re-check: another client may have already claimed
+            if (gameState.roundWinner) { hasDeclaredWin = false; return; }
+
+            const updatedPlayers = gameState.players.map(p => ({
+                ...p,
+                score: p.id === uid ? (p.score || 0) + 1 : (p.score || 0)
+            }));
+            const newHistory = [...(gameState.roundHistory || []), { round: curR, winnerId: uid, winnerName: myName }];
 
             const update = {
-                calledNumbers: arrayUnion(num),
-                currentTurn: nextTurn,
+                roundWinner: { id: uid, name: myName },
+                players: updatedPlayers,
+                roundHistory: newHistory,
             };
-
-            // Player won the round (5+ lines)
-            if (lines >= 5 && !gameState.roundWinner) {
-                // Award +1 point to winner
-                const updatedPlayers = gameState.players.map(p => ({
-                    ...p,
-                    score: p.id === uid ? (p.score || 0) + 1 : (p.score || 0)
-                }));
-                const newHistory = [...(gameState.roundHistory || []), { round: curR, winnerId: uid, winnerName: myName }];
-
-                if (curR >= totalR) {
-                    // Final round done
-                    update.roundWinner = { id: uid, name: myName };
-                    update.gameOver = true;
-                    update.players = updatedPlayers;
-                    update.roundHistory = newHistory;
-                } else {
-                    // More rounds remain
-                    update.roundWinner = { id: uid, name: myName };
-                    update.players = updatedPlayers;
-                    update.roundHistory = newHistory;
-                }
-            }
+            if (curR >= totalR) update.gameOver = true;
 
             try {
                 await updateDoc(roomRef, update);
-                await addSystemChat(`📢 ${myName} called ${num}!`);
-                if (lines >= 5 && !gameState.roundWinner) {
-                    await addSystemChat(`🎉 ${myName} got BINGO in Round ${curR}!`);
-                }
-            } catch (e) { console.error(e); showToast('Failed to call number'); }
+                await addSystemChat(`🎉 ${myName} got BINGO in Round ${curR}!`);
+            } catch (e) {
+                // If write fails (e.g. already claimed), reset flag so UI stays correct
+                hasDeclaredWin = false;
+                console.error(e);
+            }
         }
 
         // ── NEXT ROUND (any player) ────────────────────────────────────
@@ -553,12 +603,102 @@
                 document.getElementById('gameOverModal').classList.add('hidden');
                 gameOverShown = false;
                 roundModalShown = false;
+                hasDeclaredWin = false;
                 await addSystemChat(`🔁 ${myName} started a new game! Scores reset.`);
             } catch (e) { console.error(e); }
         };
 
         window.leaveGame = function () {
             if (confirm('Leave the game?')) window.location.href = 'index.html';
+        };
+
+        // ── BOARD SETUP MODAL ─────────────────────────────────────────
+        window.openBoardSetup = function () {
+            // Load the current board for this round (already saved or freshly generated)
+            const currentRound = gameState?.currentRound || 1;
+            setupBoard = [...generateBoard(currentRound)];
+            setupSelected = -1;
+            renderSetupGrid();
+            document.getElementById('boardSetupStatus').textContent = '';
+            document.getElementById('boardSetupModal').classList.remove('hidden');
+        };
+
+        function renderSetupGrid() {
+            const grid = document.getElementById('setupGrid');
+            grid.innerHTML = '';
+            setupBoard.forEach((num, idx) => {
+                const btn = document.createElement('button');
+                btn.textContent = num;
+                btn.dataset.idx = idx;
+                btn.style.cssText = [
+                    'padding:10px 0',
+                    'border-radius:8px',
+                    'font-weight:700',
+                    'font-size:15px',
+                    'transition:all .15s',
+                    'border:2px solid transparent',
+                    idx === setupSelected
+                        ? 'background:#2563eb;color:#fff;border-color:#60a5fa;transform:scale(1.08)'
+                        : 'background:rgba(255,255,255,0.06);color:#e2e8f0;'
+                ].join(';');
+                btn.onclick = () => onSetupCellClick(idx);
+                // Drag & drop support
+                btn.draggable = true;
+                btn.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', idx);
+                    setupSelected = idx;
+                    renderSetupGrid();
+                });
+                btn.addEventListener('dragover', e => e.preventDefault());
+                btn.addEventListener('drop', e => {
+                    e.preventDefault();
+                    const from = parseInt(e.dataTransfer.getData('text/plain'));
+                    swapSetupCells(from, idx);
+                });
+                grid.appendChild(btn);
+            });
+        }
+
+        function onSetupCellClick(idx) {
+            if (setupSelected === -1) {
+                // Select this cell
+                setupSelected = idx;
+            } else if (setupSelected === idx) {
+                // Deselect
+                setupSelected = -1;
+            } else {
+                // Swap with previously selected
+                swapSetupCells(setupSelected, idx);
+                setupSelected = -1;
+            }
+            renderSetupGrid();
+        }
+
+        function swapSetupCells(i, j) {
+            [setupBoard[i], setupBoard[j]] = [setupBoard[j], setupBoard[i]];
+            setupSelected = -1;
+            renderSetupGrid();
+        }
+
+        window.shuffleSetupBoard = function () {
+            setupBoard = shuffle([...setupBoard]);
+            setupSelected = -1;
+            renderSetupGrid();
+            document.getElementById('boardSetupStatus').textContent = '';
+        };
+
+        window.saveBoardSetup = function () {
+            const currentRound = gameState?.currentRound || 1;
+            const key = getBoardKey(currentRound);
+            sessionStorage.setItem(key, JSON.stringify(setupBoard));
+            // Apply immediately to the live board
+            myBoard = [...setupBoard];
+            renderBoard();
+            highlightCalled(gameState?.calledNumbers || []);
+            document.getElementById('boardSetupStatus').textContent = '✅ Board saved!';
+            setTimeout(() => {
+                document.getElementById('boardSetupModal').classList.add('hidden');
+            }, 800);
         };
 
         // ── ROUND COMPLETE MODAL ───────────────────────────────────────
